@@ -1,517 +1,607 @@
-// HomeScreen.js
-// Pantalla principal con diseño moderno y funcionalidad completa
-
-import React, { useRef, useEffect } from 'react';
+import React, { useContext, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Animated,
-  Dimensions,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Modal,
 } from 'react-native';
-import colors from '../theme/colors';
-import { useCart } from '../context/CartContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
-
-// Datos mock de productos destacados
-const FEATURED = [
-  { id: '1', name: 'Espresso Clásico', price: 2.50, emoji: '☕', badge: 'Top venta' },
-  { id: '2', name: 'Cappuccino Artesanal', price: 3.80, emoji: '🍵', badge: 'Nuevo' },
-  { id: '3', name: 'Cold Brew 24h', price: 4.20, emoji: '🧊', badge: 'Edición limitada' },
-];
-
-// Novedades o anuncios de la cafetería
-const NEWS = [
-  { id: '1', title: 'Nueva carta de temporada', desc: 'Sabores únicos de otoño', emoji: '🍂', color: '#FF9800' },
-  { id: '2', title: 'Programa de puntos', desc: 'Acumulá puntos y canjeá premios', emoji: '⭐', color: '#FFC107' },
-  { id: '3', title: 'Horario extendido', desc: 'Abierto hasta las 22hs', emoji: '🕙', color: '#4CAF50' },
-];
+import { GameContext } from '../context/GameContext';
 
 export default function HomeScreen() {
-  const { addToCart, totalItems } = useCart();
+  const {
+    board,
+    gameMode,
+    setGameMode,
+    score,
+    round,
+    suddenDeath,
+    seriesWinner,
+    makeMove,
+    resetGame,
+    resetRound,
+    resetScore,
+    isXTurn,
+    winningLine = [],
+    botDifficulty,
+    setBotDifficulty,
+    playerNames,
+    roomCode,
+    playerSymbol,
+    createOnlineRoom,
+    joinOnlineRoom,
+  } = useContext(GameContext);
 
-  // Animación de entrada para elementos principales
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const [codeInput, setCodeInput] = useState('');
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  const winnerName =
+    seriesWinner === 'X'
+      ? playerNames.player1
+      : seriesWinner === 'O'
+      ? playerNames.player2
+      : null;
+
+  if (!gameMode) {
+    return (
+      <LinearGradient colors={['#020617', '#111827', '#1e1b4b']} style={styles.bg}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.logo}>⚡</Text>
+          <Text style={styles.title}>NEON TIC TAC TOE</Text>
+          <Text style={styles.subtitle}>Elige tu modo de batalla</Text>
+
+          <TouchableOpacity style={styles.neonButtonBlue} onPress={() => setGameMode('bot')}>
+            <Text style={styles.menuText}>🤖 Contra Bot</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.neonButtonPink} onPress={() => setGameMode('local')}>
+            <Text style={styles.menuText}>👥 Dos jugadores</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>🌐 Modo online</Text>
+
+          <TouchableOpacity style={styles.neonButtonGreen} onPress={createOnlineRoom}>
+            <Text style={styles.menuText}>📱 Crear sala online</Text>
+          </TouchableOpacity>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Código de sala"
+            placeholderTextColor="#64748b"
+            value={codeInput}
+            onChangeText={setCodeInput}
+            keyboardType="numeric"
+            maxLength={4}
+          />
+
+          <TouchableOpacity
+            style={styles.neonButtonGreen}
+            onPress={() => joinOnlineRoom(codeInput)}
+          >
+            <Text style={styles.menuText}>🔗 Unirse a sala</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>🤖 Dificultad del bot</Text>
+
+          <View style={styles.difficultyRow}>
+            {['facil', 'medio', 'dificil'].map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[
+                  styles.difficultyButton,
+                  botDifficulty === level && styles.difficultyActive,
+                ]}
+                onPress={() => setBotDifficulty(level)}
+              >
+                <Text style={styles.difficultyText}>{level.toUpperCase()}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </LinearGradient>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Header con gradiente simulado (fondo sólido + sombra) */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerGreeting}>¡Bienvenido de vuelta! ☕</Text>
-          <Text style={styles.headerTitle}>CafeSoft</Text>
-        </View>
-        <TouchableOpacity style={styles.cartButton}>
-          <Text style={styles.cartIcon}>🛒</Text>
-          {totalItems > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{totalItems}</Text>
+    <LinearGradient colors={['#020617', '#111827', '#1e1b4b']} style={styles.bg}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>⚡ NEON TIC TAC TOE</Text>
+        <Text style={styles.modeHeader}>MODO: {gameMode.toUpperCase()}</Text>
+
+        {gameMode === 'bot' && (
+          <Text style={styles.botText}>Dificultad: {botDifficulty.toUpperCase()}</Text>
+        )}
+
+        {gameMode === 'online' && (
+          <View style={styles.onlineBox}>
+            <Text style={styles.onlineText}>Sala: {roomCode}</Text>
+            <Text style={styles.onlineText}>Tú eres: {playerSymbol}</Text>
+            <Text style={styles.onlineHint}>Comparte el código con el otro teléfono</Text>
+          </View>
+        )}
+
+        {suddenDeath && (
+          <Text style={styles.suddenDeathAlert}>⚡ MUERTE SÚBITA ACTIVADA ⚡</Text>
+        )}
+
+        <View style={styles.scoreBoard}>
+          <Text style={styles.scoreText}>RONDA {round} / 5</Text>
+
+          <View style={styles.scoreRow}>
+            <View style={styles.playerCardBlue}>
+              <Text style={styles.playerLabel}>
+                {gameMode === 'online' ? 'Jugador X' : playerNames.player1}
+              </Text>
+              <Text style={styles.xScore}>{score.player1}</Text>
             </View>
-          )}
-        </TouchableOpacity>
-      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Banner principal animado */}
-        <Animated.View
-          style={[
-            styles.banner,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerEmoji}>☕🔥</Text>
-            <Text style={styles.bannerTitle}>Tu café favorito,</Text>
-            <Text style={styles.bannerTitleBold}>donde quieras</Text>
-            <Text style={styles.bannerSub}>Pedí desde la app y retirá sin esperas</Text>
-          </View>
-          <View style={styles.bannerDecoration}>
-            <View style={styles.decoCircle1} />
-            <View style={styles.decoCircle2} />
-          </View>
-        </Animated.View>
+            <Text style={styles.vs}>VS</Text>
 
-        {/* Estadísticas rápidas mejoradas */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statIcon}>👥</Text>
-            <Text style={styles.statNumber}>+500</Text>
-            <Text style={styles.statLabel}>Clientes felices</Text>
+            <View style={styles.playerCardPink}>
+              <Text style={styles.playerLabel}>
+                {gameMode === 'online' ? 'Jugador O' : playerNames.player2}
+              </Text>
+              <Text style={styles.oScore}>{score.player2}</Text>
+            </View>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statIcon}>🍽️</Text>
-            <Text style={styles.statNumber}>15+</Text>
-            <Text style={styles.statLabel}>Productos</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statIcon}>⭐</Text>
-            <Text style={styles.statNumber}>4.9</Text>
-            <Text style={styles.statLabel}>Valoración</Text>
-          </View>
+
+          <Text style={styles.draws}>Empates: {score.draws}</Text>
         </View>
 
-        {/* Productos destacados */}
-        <Text style={styles.sectionTitle}>
-          ✨ Destacados del día <Text style={styles.sectionEmoji}>✨</Text>
-        </Text>
-        {FEATURED.map((product, index) => (
-          <Animated.View
-            key={product.id}
-            style={[
-              styles.featuredCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateX: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.featuredEmojiContainer}>
-              <Text style={styles.featuredEmoji}>{product.emoji}</Text>
-            </View>
-            <View style={styles.featuredInfo}>
-              <Text style={styles.featuredName}>{product.name}</Text>
-              <Text style={styles.featuredBadge}>{product.badge}</Text>
-              <Text style={styles.featuredPrice}>${product.price.toFixed(2)} MXN</Text>
-            </View>
+        <View style={styles.turnBox}>
+          <Text style={[styles.turnText, isXTurn ? styles.xColor : styles.oColor]}>
+            {seriesWinner
+              ? 'Partida finalizada'
+              : isXTurn
+              ? '🔵 Turno de X'
+              : '🔴 Turno de O'}
+          </Text>
+        </View>
+
+        <View style={styles.board}>
+          {board.map((cell, idx) => (
             <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => addToCart(product)}
-              activeOpacity={0.7}
+              key={idx}
+              style={[
+                styles.cell,
+                winningLine.includes(idx) && styles.winningCell,
+              ]}
+              onPress={() => makeMove(idx)}
+              disabled={!!seriesWinner || (gameMode === 'bot' && !isXTurn)}
             >
-              <Text style={styles.addButtonText}>+</Text>
+              <Text
+                style={[
+                  styles.cellText,
+                  cell === 'X' ? styles.xColor : styles.oColor,
+                ]}
+              >
+                {cell}
+              </Text>
             </TouchableOpacity>
-          </Animated.View>
-        ))}
+          ))}
+        </View>
 
-        {/* Novedades */}
-        <Text style={styles.sectionTitle}>
-          🆕 Novedades <Text style={styles.sectionEmoji}>🆕</Text>
-        </Text>
-        {NEWS.map((item, index) => (
-          <Animated.View
-            key={item.id}
-            style={[
-              styles.newsCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-                borderLeftColor: item.color,
-              },
-            ]}
-          >
-            <View style={[styles.newsIconContainer, { backgroundColor: `${item.color}20` }]}>
-              <Text style={styles.newsEmoji}>{item.emoji}</Text>
-            </View>
-            <View style={styles.newsInfo}>
-              <Text style={styles.newsTitle}>{item.title}</Text>
-              <Text style={styles.newsDesc}>{item.desc}</Text>
-            </View>
-          </Animated.View>
-        ))}
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity style={styles.smallButton} onPress={resetRound}>
+            <Text style={styles.buttonText}>Nueva ronda</Text>
+          </TouchableOpacity>
 
-        {/* Info de contacto mejorada */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>📍 Encontranos</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
-            <Text style={styles.infoText}>Av. Principal 123, Centro</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🕐</Text>
-            <Text style={styles.infoText}>Lun–Vie: 7:00 – 22:00</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🕐</Text>
-            <Text style={styles.infoText}>Sáb–Dom: 8:00 – 22:00</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📞</Text>
-            <Text style={styles.infoText}>+52 55 1234 5678</Text>
-          </View>
-          <TouchableOpacity style={styles.mapButton}>
-            <Text style={styles.mapButtonText}>Ver en mapa →</Text>
+          <TouchableOpacity style={styles.smallButton} onPress={resetScore}>
+            <Text style={styles.buttonText}>Marcador</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Espacio final */}
-        <View style={{ height: 40 }} />
+        <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
+          <Text style={styles.resetText}>↩ Volver al menú</Text>
+        </TouchableOpacity>
+
+        <Modal transparent visible={!!seriesWinner} animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>🏆 VICTORIA 🏆</Text>
+              <Text style={styles.modalWinner}>{winnerName}</Text>
+              <Text style={styles.modalText}>Ganó la serie</Text>
+
+              <TouchableOpacity style={styles.modalButton} onPress={resetGame}>
+                <Text style={styles.buttonText}>Jugar otra vez</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  bg: {
+    flex: 1,
+  },
+
   container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexGrow: 1,
     alignItems: 'center',
-    paddingTop: 55,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    justifyContent: 'center',
+    padding: 20,
   },
-  headerGreeting: {
-    color: colors.textLight,
-    fontSize: 13,
-    opacity: 0.9,
-    letterSpacing: 0.5,
+
+  logo: {
+    fontSize: 70,
+    marginBottom: 10,
   },
-  headerTitle: {
-    color: colors.textLight,
-    fontSize: 28,
-    fontWeight: 'bold',
+
+  title: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#e0f2fe',
+    textAlign: 'center',
+    marginBottom: 8,
+    textShadowColor: '#22d3ee',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 18,
     letterSpacing: 1,
-    marginTop: 4,
   },
-  cartButton: {
-    position: 'relative',
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 30,
+
+  subtitle: {
+    color: '#94a3b8',
+    fontSize: 16,
+    marginBottom: 25,
+    textAlign: 'center',
   },
-  cartIcon: {
-    fontSize: 26,
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  scroll: {
-    padding: 20,
-    paddingBottom: 20,
-  },
-  banner: {
-    backgroundColor: colors.primary,
-    borderRadius: 25,
-    padding: 20,
-    marginBottom: 20,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  bannerContent: {
-    zIndex: 2,
-  },
-  bannerEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  bannerTitle: {
-    color: colors.textLight,
-    fontSize: 22,
-    fontWeight: '600',
-    lineHeight: 28,
-  },
-  bannerTitleBold: {
-    color: colors.textLight,
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  bannerSub: {
-    color: colors.textLight,
-    fontSize: 14,
-    opacity: 0.9,
-  },
-  bannerDecoration: {
-    position: 'absolute',
-    right: -20,
-    top: -20,
-    zIndex: 1,
-  },
-  decoCircle1: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    position: 'absolute',
-    top: 0,
-    right: 0,
-  },
-  decoCircle2: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    position: 'absolute',
-    top: 40,
-    right: 30,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 28,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 14,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  statIcon: {
-    fontSize: 24,
-    marginBottom: 6,
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
+
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 14,
-    marginTop: 6,
-  },
-  sectionEmoji: {
-    fontSize: 18,
-  },
-  featuredCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  featuredEmojiContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featuredEmoji: {
-    fontSize: 36,
-  },
-  featuredInfo: {
-    flex: 1,
-  },
-  featuredName: {
+    color: '#facc15',
     fontSize: 16,
     fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
+    marginTop: 18,
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  featuredBadge: {
-    fontSize: 11,
-    color: colors.secondary,
-    fontWeight: '600',
-    marginBottom: 4,
+
+  modeHeader: {
+    color: '#22d3ee',
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: 8,
   },
-  featuredPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
+
+  botText: {
+    color: '#facc15',
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.primary,
-    borderRadius: 20,
+
+  neonButtonBlue: {
+    backgroundColor: '#0f172a',
+    width: 295,
+    padding: 16,
+    borderRadius: 18,
+    marginVertical: 9,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#22d3ee',
+  },
+
+  neonButtonPink: {
+    backgroundColor: '#0f172a',
+    width: 295,
+    padding: 16,
+    borderRadius: 18,
+    marginVertical: 9,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fb7185',
+  },
+
+  neonButtonGreen: {
+    backgroundColor: '#0f172a',
+    width: 295,
+    padding: 16,
+    borderRadius: 18,
+    marginVertical: 9,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#22c55e',
+  },
+
+  menuText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+
+  input: {
+    backgroundColor: '#020617',
+    color: '#fff',
+    width: 295,
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#475569',
+    marginVertical: 10,
+    textAlign: 'center',
+    fontSize: 17,
+  },
+
+  difficultyRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  difficultyButton: {
+    backgroundColor: '#020617',
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#475569',
+  },
+
+  difficultyActive: {
+    backgroundColor: '#be123c',
+    borderColor: '#fb7185',
+  },
+
+  difficultyText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
+  onlineBox: {
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    borderRadius: 18,
+    padding: 15,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: '#facc15',
+  },
+
+  onlineText: {
+    color: '#facc15',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
+  onlineHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+
+  suddenDeathAlert: {
+    color: '#fb7185',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    textAlign: 'center',
+    textShadowColor: '#fb7185',
+    textShadowRadius: 15,
+  },
+
+  scoreBoard: {
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    padding: 16,
+    borderRadius: 22,
+    width: '100%',
+    maxWidth: 350,
+    alignItems: 'center',
+    marginBottom: 18,
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+
+  scoreText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  playerCardBlue: {
+    backgroundColor: '#020617',
+    borderRadius: 16,
+    padding: 13,
+    width: 115,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#22d3ee',
+  },
+
+  playerCardPink: {
+    backgroundColor: '#020617',
+    borderRadius: 16,
+    padding: 13,
+    width: 115,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fb7185',
+  },
+
+  playerLabel: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+
+  xScore: {
+    color: '#22d3ee',
+    fontSize: 30,
+    fontWeight: '900',
+  },
+
+  oScore: {
+    color: '#fb7185',
+    fontSize: 30,
+    fontWeight: '900',
+  },
+
+  vs: {
+    color: '#facc15',
+    fontWeight: '900',
+    marginHorizontal: 10,
+  },
+
+  draws: {
+    color: '#cbd5e1',
+    marginTop: 12,
+    fontWeight: 'bold',
+  },
+
+  turnBox: {
+    backgroundColor: '#020617',
+    paddingVertical: 11,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+
+  turnText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+
+  board: {
+    width: 325,
+    height: 325,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#020617',
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 22,
+    borderWidth: 3,
+    borderColor: '#22d3ee',
+  },
+
+  cell: {
+    width: '33.33%',
+    height: '33.33%',
+    borderWidth: 1,
+    borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#0f172a',
   },
-  addButtonText: {
+
+  winningCell: {
+    backgroundColor: '#14532d',
+  },
+
+  cellText: {
+    fontSize: 54,
+    fontWeight: '900',
+  },
+
+  xColor: {
+    color: '#22d3ee',
+    textShadowColor: '#22d3ee',
+    textShadowRadius: 15,
+  },
+
+  oColor: {
+    color: '#fb7185',
+    textShadowColor: '#fb7185',
+    textShadowRadius: 15,
+  },
+
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  smallButton: {
+    backgroundColor: '#0f172a',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#22d3ee',
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  resetButton: {
+    backgroundColor: '#be123c',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fb7185',
+    marginBottom: 20,
+  },
+
+  resetText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 25,
+  },
+
+  modalCard: {
+    backgroundColor: '#020617',
+    borderRadius: 25,
+    padding: 25,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#facc15',
+  },
+
+  modalTitle: {
+    color: '#facc15',
+    fontSize: 28,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+
+  modalWinner: {
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
-    lineHeight: 28,
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  newsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 14,
-    borderLeftWidth: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    elevation: 3,
+
+  modalText: {
+    color: '#94a3b8',
+    fontSize: 16,
+    marginBottom: 20,
   },
-  newsIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  newsEmoji: {
-    fontSize: 26,
-  },
-  newsInfo: {
-    flex: 1,
-  },
-  newsTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  newsDesc: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 14,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 12,
-  },
-  infoIcon: {
-    fontSize: 18,
-    width: 28,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  mapButton: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 30,
-  },
-  mapButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
+
+  modalButton: {
+    backgroundColor: '#be123c',
+    paddingVertical: 14,
+    paddingHorizontal: 25,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#fb7185',
   },
 });
