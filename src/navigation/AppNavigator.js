@@ -1,191 +1,295 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Animated, StatusBar } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import HomeScreen from '../screens/HomeScreen';
+import HistoryScreen from '../screens/HistoryScreen';
 import { GameContext } from '../context/GameContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const { width, height } = Dimensions.get('window');
 
-function NeonScreen({ children }) {
+function StatsScreen() {
+  const { stats } = useContext(GameContext);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const statCards = [
+    { label: 'Total Games', value: stats.gamesPlayed, icon: 'game-controller', color: '#3b82f6', gradient: ['#3b82f6', '#2563eb'] },
+    { label: 'X Wins', value: stats.xWins, icon: 'close', color: '#ef4444', gradient: ['#ef4444', '#dc2626'] },
+    { label: 'O Wins', value: stats.oWins, icon: 'radio-button-off', color: '#10b981', gradient: ['#10b981', '#059669'] },
+    { label: 'Draws', value: stats.draws, icon: 'albums', color: '#f59e0b', gradient: ['#f59e0b', '#d97706'] },
+    { label: 'Total Moves', value: stats.totalMoves, icon: 'footsteps', color: '#8b5cf6', gradient: ['#8b5cf6', '#7c3aed'] },
+    { label: 'Best Streak', value: stats.bestStreak, icon: 'flame', color: '#ec4899', gradient: ['#ec4899', '#db2777'] },
+  ];
+
   return (
-    <LinearGradient colors={['#020617', '#111827', '#1e1b4b']} style={styles.bg}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {children}
+    <LinearGradient colors={['#020617', '#0f172a', '#1e1b4b']} style={styles.bgGradient}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView style={styles.statsContainer} contentContainerStyle={styles.statsContent} showsVerticalScrollIndicator={false}>
+        <Animated.View style={[styles.headerPremium, { opacity: fadeAnim }]}>
+          <View style={styles.headerGlow} />
+          <LinearGradient
+            colors={['#38bdf8', '#818cf8', '#c084fc']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerIconCircle}
+          >
+            <Ionicons name="stats-chart" size={40} color="#fff" />
+          </LinearGradient>
+          <Text style={styles.statsTitle}>STATISTICS</Text>
+          <View style={styles.statsBadge}>
+            <Text style={styles.statsBadgeText}>LIFETIME</Text>
+          </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.statsGrid, { opacity: fadeAnim }]}>
+          {statCards.map((stat, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.statCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{
+                    translateY: fadeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [50, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={[`${stat.color}15`, `${stat.color}05`]}
+                style={styles.statCardGradient}
+              >
+                <View style={[styles.statIconWrapper, { backgroundColor: `${stat.color}20` }]}>
+                  <Ionicons name={stat.icon} size={28} color={stat.color} />
+                </View>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+                <View style={[styles.statProgress, { backgroundColor: `${stat.color}30` }]}>
+                  <View style={[styles.statProgressFill, { width: `${Math.min(100, stat.value * 2)}%`, backgroundColor: stat.color }]} />
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          ))}
+        </Animated.View>
+
+        <View style={styles.statsFooter}>
+          <Text style={styles.statsFooterText}>★ ELITE PLAYER ★</Text>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
 }
 
-function StatsScreen() {
-  const { stats, score, round, suddenDeath, seriesWinner } = useContext(GameContext);
-
-  return (
-    <NeonScreen>
-      <Text style={styles.title}>🏆 ESTADÍSTICAS</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.stat}>Partidas jugadas: {stats.gamesPlayed}</Text>
-        <Text style={styles.stat}>Victorias X: {stats.xWins}</Text>
-        <Text style={styles.stat}>Victorias O: {stats.oWins}</Text>
-        <Text style={styles.stat}>Empates: {stats.draws}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Serie actual</Text>
-        <Text style={styles.stat}>Ronda: {round}</Text>
-        <Text style={styles.stat}>Jugador X: {score.player1}</Text>
-        <Text style={styles.stat}>Jugador O: {score.player2}</Text>
-        <Text style={styles.stat}>Empates: {score.draws}</Text>
-        <Text style={styles.stat}>Muerte súbita: {suddenDeath ? 'Activada ⚡' : 'No'}</Text>
-        <Text style={styles.stat}>Ganador: {seriesWinner || 'Aún no hay'}</Text>
-      </View>
-    </NeonScreen>
-  );
-}
-
-function HistoryScreen() {
-  const { history } = useContext(GameContext);
-
-  return (
-    <NeonScreen>
-      <Text style={styles.title}>📜 HISTORIAL</Text>
-
-      {history.length === 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.text}>Todavía no hay partidas registradas.</Text>
-        </View>
-      ) : (
-        history.map((item) => (
-          <View key={item.id} style={styles.historyItem}>
-            <Text style={styles.historyTitle}>Ronda {item.round}</Text>
-            <Text style={styles.text}>Resultado: {item.resultText}</Text>
-            <Text style={styles.text}>Modo: {item.mode}</Text>
-          </View>
-        ))
-      )}
-    </NeonScreen>
-  );
-}
-
 function SettingsScreen() {
-  const { resetGame, resetScore, resetStats, botDifficulty, setBotDifficulty } =
-    useContext(GameContext);
+  const { resetGame, resetScore, resetStats } = useContext(GameContext);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const settingsOptions = [
+    { 
+      title: 'Reset Score', 
+      icon: 'refresh-circle', 
+      color: '#f59e0b',
+      gradient: ['#f59e0b', '#d97706'],
+      action: resetScore,
+      description: 'Reset current game score',
+      warning: false
+    },
+    { 
+      title: 'Reset Stats & History', 
+      icon: 'trash-bin', 
+      color: '#ef4444',
+      gradient: ['#ef4444', '#dc2626'],
+      action: resetStats,
+      description: 'Clear all statistics and history',
+      warning: true
+    },
+    { 
+      title: 'Reset All', 
+      icon: 'warning', 
+      color: '#dc2626',
+      gradient: ['#dc2626', '#b91c1c'],
+      action: resetGame,
+      description: 'Complete reset of everything',
+      warning: true
+    },
+  ];
 
   return (
-    <NeonScreen>
-      <Text style={styles.title}>⚙️ CONFIGURACIÓN</Text>
+    <LinearGradient colors={['#020617', '#0f172a', '#1e1b4b']} style={styles.bgGradient}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView style={styles.settingsContainer} contentContainerStyle={styles.settingsContent} showsVerticalScrollIndicator={false}>
+        <Animated.View style={[styles.headerPremium, { opacity: fadeAnim }]}>
+          <View style={styles.headerGlow} />
+          <LinearGradient
+            colors={['#f472b6', '#ec4899', '#be185d']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerIconCircle}
+          >
+            <Ionicons name="settings-sharp" size={40} color="#fff" />
+          </LinearGradient>
+          <Text style={styles.statsTitle}>SETTINGS</Text>
+          <View style={styles.statsBadge}>
+            <Text style={styles.statsBadgeText}>PREFERENCES</Text>
+          </View>
+        </Animated.View>
 
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Dificultad del bot</Text>
-
-        <View style={styles.difficultyRow}>
-          {['facil', 'medio', 'dificil'].map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.difficultyButton,
-                botDifficulty === level && styles.difficultyActive,
-              ]}
-              onPress={() => setBotDifficulty(level)}
+        <Animated.View style={[styles.settingsList, { opacity: fadeAnim }]}>
+          {settingsOptions.map((option, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={styles.settingsCard}
+              onPress={option.action}
+              activeOpacity={0.7}
             >
-              <Text style={styles.difficultyText}>{level.toUpperCase()}</Text>
+              <LinearGradient
+                colors={[`${option.color}15`, `${option.color}05`]}
+                style={styles.settingsCardGradient}
+              >
+                <View style={[styles.settingsIcon, { backgroundColor: `${option.color}20` }]}>
+                  <Ionicons name={option.icon} size={28} color={option.color} />
+                </View>
+                <View style={styles.settingsContent}>
+                  <Text style={styles.settingsTitle}>{option.title}</Text>
+                  <Text style={styles.settingsDescription}>{option.description}</Text>
+                </View>
+                {option.warning ? (
+                  <View style={styles.warningBadge}>
+                    <Ionicons name="alert-triangle" size={14} color="#ef4444" />
+                  </View>
+                ) : null}
+                <Ionicons name="chevron-forward" size={20} color="#475569" />
+              </LinearGradient>
             </TouchableOpacity>
           ))}
+        </Animated.View>
+
+        <View style={styles.versionCard}>
+          <LinearGradient
+            colors={['rgba(56,189,248,0.1)', 'rgba(56,189,248,0.05)']}
+            style={styles.versionGradient}
+          >
+            <Ionicons name="cube" size={20} color="#38bdf8" />
+            <Text style={styles.versionText}>Tic Tac Toe Elite v3.0</Text>
+            <View style={styles.versionDot} />
+          </LinearGradient>
         </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Opciones</Text>
-
-        <TouchableOpacity style={styles.button} onPress={resetScore}>
-          <Text style={styles.buttonText}>Reiniciar marcador</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={resetStats}>
-          <Text style={styles.buttonText}>Reiniciar estadísticas</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.dangerButton} onPress={resetGame}>
-          <Text style={styles.buttonText}>Reiniciar todo</Text>
-        </TouchableOpacity>
-      </View>
-    </NeonScreen>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
-function AboutScreen() {
-  return (
-    <NeonScreen>
-      <Text style={styles.title}>ℹ️ ACERCA DE</Text>
+function CustomTabBar({ state, descriptors, navigation }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-      <View style={styles.card}>
-        <Text style={styles.text}>🎮 Tic Tac Toe Pro</Text>
-        <Text style={styles.text}>Proyecto hecho con React Native y Expo.</Text>
-        <Text style={styles.text}>
-          Incluye modo local, bot, online, marcador, historial, estadísticas,
-          dificultad del bot y muerte súbita.
-        </Text>
-      </View>
-    </NeonScreen>
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.customTabBar, { opacity: fadeAnim }]}>
+      <LinearGradient
+        colors={['#0f172acc', '#0f172a', '#0f172a', '#0f172a']}
+        style={styles.tabBarGradient}
+      >
+        <View style={styles.tabBarBlur} />
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          let iconName = 'game-controller';
+          let label = '';
+          
+          if (route.name === 'Juego') {
+            iconName = isFocused ? 'game-controller' : 'game-controller-outline';
+            label = 'PLAY';
+          } else if (route.name === 'Estadisticas') {
+            iconName = isFocused ? 'stats-chart' : 'stats-chart-outline';
+            label = 'STATS';
+          } else if (route.name === 'Historial') {
+            iconName = isFocused ? 'time' : 'time-outline';
+            label = 'HISTORY';
+          } else if (route.name === 'Configuracion') {
+            iconName = isFocused ? 'settings' : 'settings-outline';
+            label = 'SETTINGS';
+          }
+
+          return (
+            <TouchableOpacity
+              key={index}
+              onPress={onPress}
+              style={styles.tabItem}
+              activeOpacity={0.7}
+            >
+              {isFocused && (
+                <Animated.View style={[styles.tabGlow, { backgroundColor: '#38bdf8' }]} />
+              )}
+              <View style={[styles.tabIconWrapper, isFocused && styles.tabIconFocused]}>
+                <Ionicons
+                  name={iconName}
+                  size={isFocused ? 24 : 22}
+                  color={isFocused ? '#38bdf8' : '#64748b'}
+                />
+              </View>
+              <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#22d3ee',
-        tabBarInactiveTintColor: '#64748b',
-        tabBarStyle: {
-          backgroundColor: '#020617',
-          borderTopWidth: 2,
-          borderTopColor: '#22d3ee',
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '900',
-        },
-      }}
+      tabBar={props => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="Juego" component={HomeScreen} options={{
-        tabBarLabel: 'Jugar',
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>🎮</Text>,
-      }} />
-
-      <Tab.Screen name="Estadisticas" component={StatsScreen} options={{
-        tabBarLabel: 'Stats',
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>🏆</Text>,
-      }} />
-
-      <Tab.Screen name="Historial" component={HistoryScreen} options={{
-        tabBarLabel: 'Historial',
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>📜</Text>,
-      }} />
-
-      <Tab.Screen name="Configuracion" component={SettingsScreen} options={{
-        tabBarLabel: 'Config',
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>⚙️</Text>,
-      }} />
-
-      <Tab.Screen name="Acerca" component={AboutScreen} options={{
-        tabBarLabel: 'Info',
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>ℹ️</Text>,
-      }} />
+      <Tab.Screen name="Juego" component={HomeScreen} />
+      <Tab.Screen name="Estadisticas" component={StatsScreen} />
+      <Tab.Screen name="Historial" component={HistoryScreen} />
+      <Tab.Screen name="Configuracion" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -193,7 +297,7 @@ function MainTabs() {
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Main" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
       </Stack.Navigator>
     </NavigationContainer>
@@ -201,112 +305,278 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  bg: {
+  bgGradient: {
     flex: 1,
   },
-  container: {
-    flexGrow: 1,
+  
+  // Common Header
+  headerPremium: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 30,
+    position: 'relative',
+  },
+  headerGlow: {
+    position: 'absolute',
+    top: 40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    shadowColor: '#38bdf8',
+    shadowRadius: 50,
+    shadowOpacity: 0.5,
+  },
+  headerIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#38bdf8',
+    shadowRadius: 20,
+    shadowOpacity: 0.5,
   },
-  title: {
-    color: '#e0f2fe',
+  statsTitle: {
+    color: '#ffffff',
     fontSize: 28,
     fontWeight: '900',
-    marginBottom: 25,
-    textAlign: 'center',
-    textShadowColor: '#22d3ee',
-    textShadowRadius: 18,
+    letterSpacing: 3,
+    textShadowColor: 'rgba(56,189,248,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
+  },
+  statsBadge: {
+    backgroundColor: 'rgba(56,189,248,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+  },
+  statsBadgeText: {
+    color: '#38bdf8',
+    fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 1,
   },
-  subtitle: {
-    color: '#facc15',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 15,
-    textAlign: 'center',
+  
+  // Stats Screen
+  statsContainer: {
+    flex: 1,
   },
-  card: {
-    width: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    borderRadius: 22,
-    padding: 22,
-    borderWidth: 2,
-    borderColor: '#22d3ee',
-    marginBottom: 18,
+  statsContent: {
+    paddingBottom: 40,
   },
-  stat: {
-    color: '#e2e8f0',
-    fontSize: 17,
-    marginBottom: 10,
-    fontWeight: 'bold',
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    gap: 16,
   },
-  text: {
-    color: '#cbd5e1',
-    fontSize: 16,
-    marginBottom: 10,
-    textAlign: 'center',
+  statCard: {
+    width: (width - 48) / 2,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  historyItem: {
-    width: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 2,
-    borderColor: '#fb7185',
+  statCardGradient: {
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.1)',
+    borderRadius: 24,
+  },
+  statIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
-  historyTitle: {
-    color: '#facc15',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 8,
-    textAlign: 'center',
+  statValue: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
-  difficultyRow: {
+  statLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  statProgress: {
+    width: '100%',
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  statProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  statsFooter: {
+    alignItems: 'center',
+    marginTop: 30,
+    paddingVertical: 20,
+  },
+  statsFooterText: {
+    color: '#334155',
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  
+  // Settings Screen
+  settingsContainer: {
+    flex: 1,
+  },
+  settingsContent: {
+    paddingBottom: 40,
+  },
+  settingsList: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  settingsCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  settingsCardGradient: {
     flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.1)',
+    borderRadius: 20,
+  },
+  settingsIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsContent: {
+    flex: 1,
+  },
+  settingsTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  settingsDescription: {
+    color: '#64748b',
+    fontSize: 11,
+  },
+  warningBadge: {
+    backgroundColor: 'rgba(239,68,68,0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  versionCard: {
+    marginTop: 30,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  versionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-  },
-  difficultyButton: {
-    backgroundColor: '#020617',
-    paddingVertical: 11,
-    paddingHorizontal: 13,
-    borderRadius: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: 'rgba(56,189,248,0.1)',
+    borderRadius: 16,
   },
-  difficultyActive: {
-    backgroundColor: '#be123c',
-    borderColor: '#fb7185',
+  versionText: {
+    color: '#475569',
+    fontSize: 11,
+    letterSpacing: 1,
   },
-  difficultyText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 12,
+  versionDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#38bdf8',
   },
-  button: {
-    backgroundColor: '#0f172a',
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 12,
+  
+  // Custom Tab Bar
+  customTabBar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    borderRadius: 30,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  tabBarGradient: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    position: 'relative',
+  },
+  tabBarBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15,23,42,0.9)',
+  },
+  tabItem: {
+    flex: 1,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#22d3ee',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    position: 'relative',
   },
-  dangerButton: {
-    backgroundColor: '#be123c',
-    padding: 14,
-    borderRadius: 14,
-    marginTop: 5,
+  tabGlow: {
+    position: 'absolute',
+    top: -2,
+    width: 40,
+    height: 3,
+    borderRadius: 2,
+  },
+  tabIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fb7185',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 15,
+  tabIconFocused: {
+    backgroundColor: 'rgba(56,189,248,0.15)',
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748b',
+    letterSpacing: 0.5,
+  },
+  tabLabelFocused: {
+    color: '#38bdf8',
+    fontWeight: '700',
   },
 });
